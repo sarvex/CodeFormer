@@ -38,7 +38,7 @@ if __name__ == '__main__':
     }
 
     if args.method == 'all':
-        for method in file_urls.keys():
+        for method in file_urls:
             download_pretrained_models(method, file_urls[method])
     else:
         download_pretrained_models(args.method, file_urls[args.method])

@@ -104,28 +104,27 @@ def make_lmdb_from_imgs(data_path,
     # write data to lmdb
     pbar = tqdm(total=len(img_path_list), unit='chunk')
     txn = env.begin(write=True)
-    txt_file = open(osp.join(lmdb_path, 'meta_info.txt'), 'w')
-    for idx, (path, key) in enumerate(zip(img_path_list, keys)):
-        pbar.update(1)
-        pbar.set_description(f'Write {key}')
-        key_byte = key.encode('ascii')
-        if multiprocessing_read:
-            img_byte = dataset[key]
-            h, w, c = shapes[key]
-        else:
-            _, img_byte, img_shape = read_img_worker(osp.join(data_path, path), key, compress_level)
-            h, w, c = img_shape
+    with open(osp.join(lmdb_path, 'meta_info.txt'), 'w') as txt_file:
+        for idx, (path, key) in enumerate(zip(img_path_list, keys)):
+            pbar.update(1)
+            pbar.set_description(f'Write {key}')
+            key_byte = key.encode('ascii')
+            if multiprocessing_read:
+                img_byte = dataset[key]
+                h, w, c = shapes[key]
+            else:
+                _, img_byte, img_shape = read_img_worker(osp.join(data_path, path), key, compress_level)
+                h, w, c = img_shape
 
-        txn.put(key_byte, img_byte)
-        # write meta information
-        txt_file.write(f'{key}.png ({h},{w},{c}) {compress_level}\n')
-        if idx % batch == 0:
-            txn.commit()
-            txn = env.begin(write=True)
-    pbar.close()
-    txn.commit()
-    env.close()
-    txt_file.close()
+            txn.put(key_byte, img_byte)
+            # write meta information
+            txt_file.write(f'{key}.png ({h},{w},{c}) {compress_level}\n')
+            if idx % batch == 0:
+                txn.commit()
+                txn = env.begin(write=True)
+        pbar.close()
+        txn.commit()
+        env.close()
     print('\nFinish writing lmdb.')
 
 

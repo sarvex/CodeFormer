@@ -11,7 +11,7 @@ def download_pretrained_models(method, file_ids):
     os.makedirs(save_path_root, exist_ok=True)
 
     for file_name, file_id in file_ids.items():
-        file_url = 'https://drive.google.com/uc?id='+file_id
+        file_url = f'https://drive.google.com/uc?id={file_id}'
         save_path = osp.abspath(osp.join(save_path_root, file_name))
         if osp.exists(save_path):
             user_response = input(f'{file_name} already exist. Do you want to cover it? Y/N\n')
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     }
 
     if args.method == 'all':
-        for method in file_ids.keys():
+        for method in file_ids:
             download_pretrained_models(method, file_ids[method])
     else:
         download_pretrained_models(args.method, file_ids[args.method])

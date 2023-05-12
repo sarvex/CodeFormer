@@ -61,21 +61,21 @@ def generate_frame_indices(crt_idx, max_frame_num, num_frames, padding='reflecti
     indices = []
     for i in range(crt_idx - num_pad, crt_idx + num_pad + 1):
         if i < 0:
-            if padding == 'replicate':
-                pad_idx = 0
-            elif padding == 'reflection':
+            if padding == 'reflection':
                 pad_idx = -i
             elif padding == 'reflection_circle':
                 pad_idx = crt_idx + num_pad - i
+            elif padding == 'replicate':
+                pad_idx = 0
             else:
                 pad_idx = num_frames + i
         elif i > max_frame_num:
-            if padding == 'replicate':
-                pad_idx = max_frame_num
-            elif padding == 'reflection':
+            if padding == 'reflection':
                 pad_idx = max_frame_num * 2 - i
             elif padding == 'reflection_circle':
                 pad_idx = (crt_idx - num_pad) - (i - max_frame_num)
+            elif padding == 'replicate':
+                pad_idx = max_frame_num
             else:
                 pad_idx = i - num_frames
         else:
@@ -137,10 +137,12 @@ def paired_paths_from_lmdb(folders, keys):
     if set(input_lmdb_keys) != set(gt_lmdb_keys):
         raise ValueError(f'Keys in {input_key}_folder and {gt_key}_folder are different.')
     else:
-        paths = []
-        for lmdb_key in sorted(input_lmdb_keys):
-            paths.append(dict([(f'{input_key}_path', lmdb_key), (f'{gt_key}_path', lmdb_key)]))
-        return paths
+        return [
+            dict(
+                [(f'{input_key}_path', lmdb_key), (f'{gt_key}_path', lmdb_key)]
+            )
+            for lmdb_key in sorted(input_lmdb_keys)
+        ]
 
 
 def paired_paths_from_meta_info_file(folders, keys, meta_info_file, filename_tmpl):

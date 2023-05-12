@@ -13,7 +13,7 @@ DEFAULT_CROP_SIZE = (96, 112)
 class FaceWarpException(Exception):
 
     def __str__(self):
-        return 'In File {}:{}'.format(__file__, super.__str__(self))
+        return f'In File {__file__}:{super.__str__(self)}'
 
 
 def get_reference_facial_points(output_size=None, inner_padding_factor=0.0, outer_padding=(0, 0), default_square=False):
@@ -70,7 +70,9 @@ def get_reference_facial_points(output_size=None, inner_padding_factor=0.0, oute
         if output_size is None:
             return tmp_5pts
         else:
-            raise FaceWarpException('No paddings to do, output_size must be None or {}'.format(tmp_crop_size))
+            raise FaceWarpException(
+                f'No paddings to do, output_size must be None or {tmp_crop_size}'
+            )
 
     # check output size
     if not (0 <= inner_padding_factor <= 1.0):
@@ -80,7 +82,10 @@ def get_reference_facial_points(output_size=None, inner_padding_factor=0.0, oute
         output_size = tmp_crop_size * \
             (1 + inner_padding_factor * 2).astype(np.int32)
         output_size += np.array(outer_padding)
-    if not (outer_padding[0] < output_size[0] and outer_padding[1] < output_size[1]):
+    if (
+        outer_padding[0] >= output_size[0]
+        or outer_padding[1] >= output_size[1]
+    ):
         raise FaceWarpException('Not (outer_padding[0] < output_size[0] and outer_padding[1] < output_size[1])')
 
     # 1) pad the inner region according inner_padding_factor
@@ -208,12 +213,10 @@ def warp_and_crop_face(src_img, facial_pts, reference_pts=None, crop_size=(96, 1
         raise FaceWarpException('facial_pts and reference_pts must have the same shape')
 
     if align_type == 'cv2_affine':
-        tfm = cv2.getAffineTransform(src_pts[0:3], ref_pts[0:3])
+        tfm = cv2.getAffineTransform(src_pts[:3], ref_pts[:3])
     elif align_type == 'affine':
         tfm = get_affine_transform_matrix(src_pts, ref_pts)
     else:
         tfm = get_similarity_transform_for_cv2(src_pts, ref_pts)
 
-    face_img = cv2.warpAffine(src_img, tfm, (crop_size[0], crop_size[1]))
-
-    return face_img
+    return cv2.warpAffine(src_img, tfm, (crop_size[0], crop_size[1]))

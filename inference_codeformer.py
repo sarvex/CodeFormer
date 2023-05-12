@@ -23,7 +23,9 @@ def set_realesrgan():
     use_half = False
     if torch.cuda.is_available(): # set False in CPU/MPS mode
         no_half_gpu_list = ['1650', '1660'] # set False for GPUs that don't support f16
-        if not True in [gpu in torch.cuda.get_device_name(0) for gpu in no_half_gpu_list]:
+        if True not in [
+            gpu in torch.cuda.get_device_name(0) for gpu in no_half_gpu_list
+        ]:
             use_half = True
 
     model = RRDBNet(
@@ -108,7 +110,7 @@ if __name__ == '__main__':
         input_img_list = sorted(glob.glob(os.path.join(args.input_path, '*.[jpJP][pnPN]*[gG]')))
         result_root = f'results/{os.path.basename(args.input_path)}_{w}'
 
-    if not args.output_path is None: # set output path
+    if args.output_path is not None: # set output path
         result_root = args.output_path
 
     test_img_num = len(input_img_list)
@@ -117,24 +119,17 @@ if __name__ == '__main__':
             '\tNote that --input_path for video should end with .mp4|.mov|.avi')
 
     # ------------------ set up background upsampler ------------------
-    if args.bg_upsampler == 'realesrgan':
-        bg_upsampler = set_realesrgan()
-    else:
-        bg_upsampler = None
-
+    bg_upsampler = set_realesrgan() if args.bg_upsampler == 'realesrgan' else None
     # ------------------ set up face upsampler ------------------
     if args.face_upsample:
-        if bg_upsampler is not None:
-            face_upsampler = bg_upsampler
-        else:
-            face_upsampler = set_realesrgan()
+        face_upsampler = bg_upsampler if bg_upsampler is not None else set_realesrgan()
     else:
         face_upsampler = None
 
     # ------------------ set up CodeFormer restorer -------------------
     net = ARCH_REGISTRY.get('CodeFormer')(dim_embd=512, codebook_size=1024, n_head=8, n_layers=9, 
                                             connect_list=['32', '64', '128', '256']).to(device)
-    
+
     # ckpt_path = 'weights/CodeFormer/codeformer.pth'
     ckpt_path = load_file_from_url(url=pretrain_model_url['restoration'], 
                                     model_dir='weights/CodeFormer', progress=True, file_name=None)
@@ -165,7 +160,7 @@ if __name__ == '__main__':
     for i, img_path in enumerate(input_img_list):
         # clean all the intermediate results to process the next image
         face_helper.clean_all()
-        
+
         if isinstance(img_path, str):
             img_name = os.path.basename(img_path)
             basename, ext = os.path.splitext(img_name)
@@ -266,7 +261,7 @@ if __name__ == '__main__':
             video_name = f'{video_name}_{args.suffix}.png'
         save_restore_path = os.path.join(result_root, f'{video_name}.mp4')
         vidwriter = VideoWriter(save_restore_path, height, width, fps, audio)
-         
+
         for f in video_frames:
             vidwriter.write_frame(f)
         vidwriter.close()

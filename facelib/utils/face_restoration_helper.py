@@ -38,10 +38,7 @@ def get_largest_face(det_faces, h, w):
 
 
 def get_center_face(det_faces, h=0, w=0, center=None):
-    if center is not None:
-        center = np.array(center)
-    else:
-        center = np.array([w / 2, h / 2])
+    center = np.array(center) if center is not None else np.array([w / 2, h / 2])
     center_dist = []
     for det_face in det_faces:
         face_center = np.array([(det_face[0] + det_face[2]) / 2, (det_face[1] + det_face[3]) / 2])
@@ -108,12 +105,7 @@ class FaceRestoreHelper(object):
         self.restored_faces = []
         self.pad_input_imgs = []
 
-        if device is None:
-            # self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            self.device = get_device()
-        else:
-            self.device = device
-
+        self.device = get_device() if device is None else device
         # init face detection model
         if self.det_model == 'dlib':
             self.face_detector, self.shape_predictor_5 = self.init_dlib(dlib_model_url['face_detector'], dlib_model_url['shape_predictor_5'])
@@ -206,7 +198,7 @@ class FaceRestoreHelper(object):
             scale = 1
             input_img = self.input_img
         else:
-            h, w = self.input_img.shape[0:2]
+            h, w = self.input_img.shape[:2]
             scale = resize / min(h, w)
             scale = max(1, scale) # always scale up
             h, w = int(h * scale), int(w * scale)
@@ -232,8 +224,8 @@ class FaceRestoreHelper(object):
             else:
                 landmark = np.array([[bbox[i], bbox[i + 1]] for i in range(5, 15, 2)])
             self.all_landmarks_5.append(landmark)
-            self.det_faces.append(bbox[0:5])
-            
+            self.det_faces.append(bbox[:5])
+
         if len(self.det_faces) == 0:
             return 0
         if only_keep_largest:
@@ -248,6 +240,7 @@ class FaceRestoreHelper(object):
         # pad blurry images
         if self.pad_blur:
             self.pad_input_imgs = []
+            rect_scale = 1.5
             for landmarks in self.all_landmarks_5:
                 # get landmarks
                 eye_left = landmarks[0, :]
@@ -263,7 +256,6 @@ class FaceRestoreHelper(object):
                 #  - np.flipud(eye_to_mouth) * [-1, 1]: rotate 90 clockwise
                 # norm with the hypotenuse: get the direction
                 x /= np.hypot(*x)  # get the hypotenuse of a right triangle
-                rect_scale = 1.5
                 x *= max(np.hypot(*eye_to_eye) * 2.0 * rect_scale, np.hypot(*eye_to_mouth) * 1.8 * rect_scale)
                 # y: half height of the oriented crop rectangle
                 y = np.flipud(x) * [-1, 1]
@@ -335,10 +327,7 @@ class FaceRestoreHelper(object):
                 border_mode = cv2.BORDER_REFLECT101
             elif border_mode == 'reflect':
                 border_mode = cv2.BORDER_REFLECT
-            if self.pad_blur:
-                input_img = self.pad_input_imgs[idx]
-            else:
-                input_img = self.input_img
+            input_img = self.pad_input_imgs[idx] if self.pad_blur else self.input_img
             cropped_face = cv2.warpAffine(
                 input_img, affine_matrix, self.face_size, borderMode=border_mode, borderValue=(135, 133, 132))  # gray
             self.cropped_faces.append(cropped_face)
@@ -382,7 +371,7 @@ class FaceRestoreHelper(object):
 
         assert len(self.restored_faces) == len(
             self.inverse_affine_matrices), ('length of restored_faces and affine_matrices are different.')
-        
+
         inv_mask_borders = []
         for restored_face, inverse_affine in zip(self.restored_faces, self.inverse_affine_matrices):
             if face_upsampler is not None:
@@ -392,10 +381,7 @@ class FaceRestoreHelper(object):
                 face_size = (self.face_size[0]*self.upscale_factor, self.face_size[1]*self.upscale_factor)
             else:
                 # Add an offset to inverse affine matrix, for more precise back alignment
-                if self.upscale_factor > 1:
-                    extra_offset = 0.5 * self.upscale_factor
-                else:
-                    extra_offset = 0
+                extra_offset = 0.5 * self.upscale_factor if self.upscale_factor > 1 else 0
                 inverse_affine[:, 2] += extra_offset
                 face_size = self.face_size
             inv_restored = cv2.warpAffine(restored_face, inverse_affine, (w_up, h_up))

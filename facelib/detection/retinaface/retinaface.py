@@ -18,29 +18,6 @@ device = get_device()
 
 def generate_config(network_name):
     
-    cfg_mnet = {
-        'name': 'mobilenet0.25',
-        'min_sizes': [[16, 32], [64, 128], [256, 512]],
-        'steps': [8, 16, 32],
-        'variance': [0.1, 0.2],
-        'clip': False,
-        'loc_weight': 2.0,
-        'gpu_train': True,
-        'batch_size': 32,
-        'ngpu': 1,
-        'epoch': 250,
-        'decay1': 190,
-        'decay2': 220,
-        'image_size': 640,
-        'return_layers': {
-            'stage1': 1,
-            'stage2': 2,
-            'stage3': 3
-        },
-        'in_channel': 32,
-        'out_channel': 64
-    }
-
     cfg_re50 = {
         'name': 'Resnet50',
         'min_sizes': [[16, 32], [64, 128], [256, 512]],
@@ -65,7 +42,24 @@ def generate_config(network_name):
     }
 
     if network_name == 'mobile0.25':
-        return cfg_mnet
+        return {
+            'name': 'mobilenet0.25',
+            'min_sizes': [[16, 32], [64, 128], [256, 512]],
+            'steps': [8, 16, 32],
+            'variance': [0.1, 0.2],
+            'clip': False,
+            'loc_weight': 2.0,
+            'gpu_train': True,
+            'batch_size': 32,
+            'ngpu': 1,
+            'epoch': 250,
+            'decay1': 190,
+            'decay2': 220,
+            'image_size': 640,
+            'return_layers': {'stage1': 1, 'stage2': 2, 'stage3': 3},
+            'in_channel': 32,
+            'out_channel': 64,
+        }
     elif network_name == 'resnet50':
         return cfg_re50
     else:
@@ -122,7 +116,7 @@ class RetinaFace(nn.Module):
     def forward(self, inputs):
         out = self.body(inputs)
 
-        if self.backbone == 'mobilenet0.25' or self.backbone == 'Resnet50':
+        if self.backbone in ['mobilenet0.25', 'Resnet50']:
             out = list(out.values())
         # FPN
         fpn = self.fpn(out)
@@ -138,11 +132,15 @@ class RetinaFace(nn.Module):
         tmp = [self.LandmarkHead[i](feature) for i, feature in enumerate(features)]
         ldm_regressions = (torch.cat(tmp, dim=1))
 
-        if self.phase == 'train':
-            output = (bbox_regressions, classifications, ldm_regressions)
-        else:
-            output = (bbox_regressions, F.softmax(classifications, dim=-1), ldm_regressions)
-        return output
+        return (
+            (bbox_regressions, classifications, ldm_regressions)
+            if self.phase == 'train'
+            else (
+                bbox_regressions,
+                F.softmax(classifications, dim=-1),
+                ldm_regressions,
+            )
+        )
 
     def __detect_faces(self, inputs):
         # get scale
@@ -171,8 +169,8 @@ class RetinaFace(nn.Module):
         image = image.astype(np.float32)
 
         # testing scale
-        im_size_min = np.min(image.shape[0:2])
-        im_size_max = np.max(image.shape[0:2])
+        im_size_min = np.min(image.shape[:2])
+        im_size_max = np.max(image.shape[:2])
         resize = float(self.target_size) / float(im_size_min)
 
         # prevent bigger axis from being more than max_size
@@ -271,7 +269,7 @@ class RetinaFace(nn.Module):
                 type=np.float32, BGR format).
             use_origin_size: whether to use origin size.
         """
-        from_PIL = True if isinstance(frames[0], Image.Image) else False
+        from_PIL = isinstance(frames[0], Image.Image)
 
         # convert to opencv format
         if from_PIL:
@@ -279,8 +277,8 @@ class RetinaFace(nn.Module):
             frames = np.asarray(frames, dtype=np.float32)
 
         # testing scale
-        im_size_min = np.min(frames[0].shape[0:2])
-        im_size_max = np.max(frames[0].shape[0:2])
+        im_size_min = np.min(frames[0].shape[:2])
+        im_size_max = np.max(frames[0].shape[:2])
         resize = float(self.target_size) / float(im_size_min)
 
         # prevent bigger axis from being more than max_size
@@ -288,16 +286,15 @@ class RetinaFace(nn.Module):
             resize = float(self.max_size) / float(im_size_max)
         resize = 1 if use_origin_size else resize
 
-        # resize
         if resize != 1:
-            if not from_PIL:
-                frames = F.interpolate(frames, scale_factor=resize)
-            else:
+            if from_PIL:
                 frames = [
                     cv2.resize(frame, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)
                     for frame in frames
                 ]
 
+            else:
+                frames = F.interpolate(frames, scale_factor=resize)
         # convert to torch.tensor format
         if not from_PIL:
             frames = frames.transpose(1, 2).transpose(1, 3).contiguous()

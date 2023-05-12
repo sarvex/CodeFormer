@@ -13,12 +13,11 @@ def mod_crop(img, scale):
         ndarray: Result image.
     """
     img = img.copy()
-    if img.ndim in (2, 3):
-        h, w = img.shape[0], img.shape[1]
-        h_remainder, w_remainder = h % scale, w % scale
-        img = img[:h - h_remainder, :w - w_remainder, ...]
-    else:
+    if img.ndim not in (2, 3):
         raise ValueError(f'Wrong img ndim: {img.ndim}.')
+    h, w = img.shape[0], img.shape[1]
+    h_remainder, w_remainder = h % scale, w % scale
+    img = img[:h - h_remainder, :w - w_remainder, ...]
     return img
 
 
@@ -138,10 +137,7 @@ def augment(imgs, hflip=True, rotation=True, flows=None, return_status=False):
             flows = flows[0]
         return imgs, flows
     else:
-        if return_status:
-            return imgs, (hflip, vflip, rot90)
-        else:
-            return imgs
+        return (imgs, (hflip, vflip, rot90)) if return_status else imgs
 
 
 def img_rotate(img, angle, center=None, scale=1.0):
@@ -161,5 +157,4 @@ def img_rotate(img, angle, center=None, scale=1.0):
         center = (w // 2, h // 2)
 
     matrix = cv2.getRotationMatrix2D(center, angle, scale)
-    rotated_img = cv2.warpAffine(img, matrix, (w, h))
-    return rotated_img
+    return cv2.warpAffine(img, matrix, (w, h))

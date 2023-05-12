@@ -20,9 +20,7 @@ IS_HIGH_VERSION = [int(m) for m in list(re.findall(r"^([0-9]+)\.([0-9]+)\.([0-9]
 
 
 def isListempty(inList):
-    if isinstance(inList, list): # Is a list
-        return all(map(isListempty, inList))
-    return False # Not a list
+    return all(map(isListempty, inList)) if isinstance(inList, list) else False
 
 class YoloDetector:
     def __init__(

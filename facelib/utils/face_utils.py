@@ -71,7 +71,7 @@ def align_crop_face_landmarks(img,
         mouth_avg = (lm[3] + lm[4]) * 0.5
     elif lm.shape[0] == 5 and lm_type == 'dlib_5':
         lm_eye_left = lm[2:4]
-        lm_eye_right = lm[0:2]
+        lm_eye_right = lm[:2]
         eye_left = np.mean(lm_eye_left, axis=0)
         eye_right = np.mean(lm_eye_right, axis=0)
         mouth_avg = lm[4]
@@ -118,32 +118,32 @@ def align_crop_face_landmarks(img,
     # TODO: do we really need shrink
     shrink = int(np.floor(qsize / output_size * 0.5))
     if shrink > 1:
-        h, w = img.shape[0:2]
+        h, w = img.shape[:2]
         rsize = (int(np.rint(float(w) / shrink)), int(np.rint(float(h) / shrink)))
         img = cv2.resize(img, rsize, interpolation=cv2.INTER_AREA)
         quad /= shrink
         qsize /= shrink
 
     # Crop
-    h, w = img.shape[0:2]
+    h, w = img.shape[:2]
     border = max(int(np.rint(qsize * 0.1)), 3)
     crop = (int(np.floor(min(quad[:, 0]))), int(np.floor(min(quad[:, 1]))), int(np.ceil(max(quad[:, 0]))),
             int(np.ceil(max(quad[:, 1]))))
     crop = (max(crop[0] - border, 0), max(crop[1] - border, 0), min(crop[2] + border, w), min(crop[3] + border, h))
     if crop[2] - crop[0] < w or crop[3] - crop[1] < h:
         img = img[crop[1]:crop[3], crop[0]:crop[2], :]
-        quad -= crop[0:2]
+        quad -= crop[:2]
 
     # Pad
     # pad: (width_left, height_top, width_right, height_bottom)
-    h, w = img.shape[0:2]
+    h, w = img.shape[:2]
     pad = (int(np.floor(min(quad[:, 0]))), int(np.floor(min(quad[:, 1]))), int(np.ceil(max(quad[:, 0]))),
            int(np.ceil(max(quad[:, 1]))))
     pad = (max(-pad[0] + border, 0), max(-pad[1] + border, 0), max(pad[2] - w + border, 0), max(pad[3] - h + border, 0))
     if enable_padding and max(pad) > border - 4:
         pad = np.maximum(pad, int(np.rint(qsize * 0.3)))
         img = np.pad(img, ((pad[1], pad[3]), (pad[0], pad[2]), (0, 0)), 'reflect')
-        h, w = img.shape[0:2]
+        h, w = img.shape[:2]
         y, x, _ = np.ogrid[:h, :w, :1]
         mask = np.maximum(1.0 - np.minimum(np.float32(x) / pad[0],
                                            np.float32(w - 1 - x) / pad[2]),
@@ -188,8 +188,8 @@ def align_crop_face_landmarks(img,
 
 
 def paste_face_back(img, face, inverse_affine):
-    h, w = img.shape[0:2]
-    face_h, face_w = face.shape[0:2]
+    h, w = img.shape[:2]
+    face_h, face_w = face.shape[:2]
     inv_restored = cv2.warpAffine(face, inverse_affine, (w, h))
     mask = np.ones((face_h, face_w, 3), dtype=np.float32)
     inv_mask = cv2.warpAffine(mask, inverse_affine, (w, h))
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     # initialize model
     det_net = init_detection_model('retinaface_resnet50', half=False)
     img_ori = cv2.imread(img_path)
-    h, w = img_ori.shape[0:2]
+    h, w = img_ori.shape[:2]
     # if larger than 800, scale it
     scale = max(h / 800, w / 800)
     if scale > 1:

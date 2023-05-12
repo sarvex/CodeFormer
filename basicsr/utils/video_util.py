@@ -15,13 +15,14 @@ except ImportError:
     import ffmpeg
 
 def get_video_meta_info(video_path):
-    ret = {}
     probe = ffmpeg.probe(video_path)
     video_streams = [stream for stream in probe['streams'] if stream['codec_type'] == 'video']
     has_audio = any(stream['codec_type'] == 'audio' for stream in probe['streams'])
-    ret['width'] = video_streams[0]['width']
-    ret['height'] = video_streams[0]['height']
-    ret['fps'] = eval(video_streams[0]['avg_frame_rate'])
+    ret = {
+        'width': video_streams[0]['width'],
+        'height': video_streams[0]['height'],
+        'fps': eval(video_streams[0]['avg_frame_rate']),
+    }
     ret['audio'] = ffmpeg.input(video_path).audio if has_audio else None
     ret['nb_frames'] = int(video_streams[0]['nb_frames'])
     return ret
@@ -53,9 +54,7 @@ class VideoReader:
         return self.height, self.width
 
     def get_fps(self):
-        if self.input_fps is not None:
-            return self.input_fps
-        return 24
+        return self.input_fps if self.input_fps is not None else 24
 
     def get_audio(self):
         return self.audio
@@ -64,11 +63,12 @@ class VideoReader:
         return self.nb_frames
 
     def get_frame_from_stream(self):
-        img_bytes = self.stream_reader.stdout.read(self.width * self.height * 3)  # 3 bytes for one pixel
-        if not img_bytes:
+        if img_bytes := self.stream_reader.stdout.read(
+            self.width * self.height * 3
+        ):
+            return np.frombuffer(img_bytes, np.uint8).reshape([self.height, self.width, 3])
+        else:
             return None
-        img = np.frombuffer(img_bytes, np.uint8).reshape([self.height, self.width, 3])
-        return img
 
     def get_frame_from_list(self):
         if self.idx >= self.nb_frames:

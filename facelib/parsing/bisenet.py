@@ -46,8 +46,7 @@ class AttentionRefinementModule(nn.Module):
         atten = self.conv_atten(atten)
         atten = self.bn_atten(atten)
         atten = self.sigmoid_atten(atten)
-        out = torch.mul(feat, atten)
-        return out
+        return torch.mul(feat, atten)
 
 
 class ContextPath(nn.Module):
@@ -103,8 +102,7 @@ class FeatureFusionModule(nn.Module):
         atten = self.conv2(atten)
         atten = self.sigmoid(atten)
         feat_atten = torch.mul(feat, atten)
-        feat_out = feat_atten + feat
-        return feat_out
+        return feat_atten + feat
 
 
 class BiSeNet(nn.Module):

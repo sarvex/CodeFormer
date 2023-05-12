@@ -67,7 +67,7 @@ def imread(img_path):
 # set enhancer with RealESRGAN
 def set_realesrgan():
     # half = True if torch.cuda.is_available() else False
-    half = True if gpu_is_available() else False
+    half = bool(gpu_is_available())
     model = RRDBNet(
         num_in_ch=3,
         num_out_ch=3,
@@ -76,7 +76,7 @@ def set_realesrgan():
         num_grow_ch=32,
         scale=2,
     )
-    upsampler = RealESRGANer(
+    return RealESRGANer(
         scale=2,
         model_path="CodeFormer/weights/realesrgan/RealESRGAN_x2plus.pth",
         model=model,
@@ -85,7 +85,6 @@ def set_realesrgan():
         pre_pad=0,
         half=half,
     )
-    return upsampler
 
 upsampler = set_realesrgan()
 # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -109,8 +108,6 @@ def inference(image, background_enhance, face_upsample, upscale, codeformer_fide
     try: # global try
         # take the default setting for the demo
         has_aligned = False
-        only_center_face = False
-        draw_box = False
         detection_model = "retinaface_resnet50"
         print('Inp:', image, background_enhance, face_upsample, upscale, codeformer_fidelity)
 
@@ -118,10 +115,9 @@ def inference(image, background_enhance, face_upsample, upscale, codeformer_fide
         print('\timage size:', img.shape)
 
         upscale = int(upscale) # convert type to int
-        if upscale > 4: # avoid memory exceeded due to too large upscale
-            upscale = 4 
+        upscale = min(upscale, 4)
         if upscale > 2 and max(img.shape[:2])>1000: # avoid memory exceeded due to too large img resolution
-            upscale = 2 
+            upscale = 2
         if max(img.shape[:2]) > 1500: # avoid memory exceeded due to too large img resolution
             upscale = 1
             background_enhance = False
@@ -148,6 +144,7 @@ def inference(image, background_enhance, face_upsample, upscale, codeformer_fide
             face_helper.cropped_faces = [img]
         else:
             face_helper.read_image(img)
+            only_center_face = False
             # get face landmarks for each face
             num_det_faces = face_helper.get_face_landmarks_5(
             only_center_face=only_center_face, resize=640, eye_dist_threshold=5
@@ -191,6 +188,7 @@ def inference(image, background_enhance, face_upsample, upscale, codeformer_fide
             else:
                 bg_img = None
             face_helper.get_inverse_affine(None)
+            draw_box = False
             # paste each restored face to the input image
             if face_upsample and face_upsampler is not None:
                 restored_img = face_helper.paste_faces_to_input_image(
@@ -204,8 +202,8 @@ def inference(image, background_enhance, face_upsample, upscale, codeformer_fide
                 )
 
         # save restored img
-        save_path = f'output/out.png'
-        imwrite(restored_img, str(save_path))
+        save_path = 'output/out.png'
+        imwrite(restored_img, save_path)
 
         restored_img = cv2.cvtColor(restored_img, cv2.COLOR_BGR2RGB)
         return restored_img, save_path

@@ -39,35 +39,30 @@ def get_landmark(filepath, only_keep_largest=True):
     dets = detector(img, 1)
 
     # Shangchen modified
-    print("Number of faces detected: {}".format(len(dets)))
+    print(f"Number of faces detected: {len(dets)}")
     if only_keep_largest:
         print('Detect several faces and only keep the largest.')
         face_areas = []
-        for k, d in enumerate(dets):
+        for d in dets:
             face_area = (d.right() - d.left()) * (d.bottom() - d.top())
             face_areas.append(face_area)
 
         largest_idx = face_areas.index(max(face_areas))
         d = dets[largest_idx]
         shape = predictor(img, d)
-        print("Part 0: {}, Part 1: {} ...".format(
-            shape.part(0), shape.part(1)))
+        print(f"Part 0: {shape.part(0)}, Part 1: {shape.part(1)} ...")
     else:
         for k, d in enumerate(dets):
-            print("Detection {}: Left: {} Top: {} Right: {} Bottom: {}".format(
-                k, d.left(), d.top(), d.right(), d.bottom()))
+            print(
+                f"Detection {k}: Left: {d.left()} Top: {d.top()} Right: {d.right()} Bottom: {d.bottom()}"
+            )
             # Get the landmarks/parts for the face in box d.
             shape = predictor(img, d)
-            print("Part 0: {}, Part 1: {} ...".format(
-                shape.part(0), shape.part(1)))
+            print(f"Part 0: {shape.part(0)}, Part 1: {shape.part(1)} ...")
 
     t = list(shape.parts())
-    a = []
-    for tt in t:
-        a.append([tt.x, tt.y])
-    lm = np.array(a)
-    # lm is a shape=(68,2) np.array
-    return lm
+    a = [[tt.x, tt.y] for tt in t]
+    return np.array(a)
 
 def align_face(filepath, out_path):
     """
@@ -80,7 +75,7 @@ def align_face(filepath, out_path):
         print('No landmark ...')
         return
 
-    lm_chin = lm[0:17]  # left-right
+    lm_chin = lm[:17]
     lm_eyebrow_left = lm[17:22]  # left-right
     lm_eyebrow_right = lm[22:27]  # left-right
     lm_nose = lm[27:31]  # top-down
@@ -124,7 +119,7 @@ def align_face(filepath, out_path):
         img = img.resize(rsize, PIL.Image.ANTIALIAS)
         quad /= shrink
         qsize /= shrink
- 
+
     # Crop.
     border = max(int(np.rint(qsize * 0.1)), 3)
     crop = (int(np.floor(min(quad[:, 0]))), int(np.floor(min(quad[:, 1]))),
@@ -134,7 +129,7 @@ def align_face(filepath, out_path):
                 img.size[0]), min(crop[3] + border, img.size[1]))
     if crop[2] - crop[0] < img.size[0] or crop[3] - crop[1] < img.size[1]:
         img = img.crop(crop)
-        quad -= crop[0:2]
+        quad -= crop[:2]
 
     # Pad.
     pad = (int(np.floor(min(quad[:, 0]))), int(np.floor(min(quad[:, 1]))),

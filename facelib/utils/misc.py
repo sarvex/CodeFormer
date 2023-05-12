@@ -13,11 +13,11 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 
 def download_pretrained_models(file_ids, save_path_root):
     import gdown
-    
+
     os.makedirs(save_path_root, exist_ok=True)
 
     for file_name, file_id in file_ids.items():
-        file_url = 'https://drive.google.com/uc?id='+file_id
+        file_url = f'https://drive.google.com/uc?id={file_id}'
         save_path = osp.abspath(osp.join(save_path_root, file_name))
         if osp.exists(save_path):
             user_response = input(f'{file_name} already exist. Do you want to cover it? Y/N\n')
@@ -125,11 +125,7 @@ def scandir(dir_path, suffix=None, recursive=False, full_path=False):
     def _scandir(dir_path, suffix, recursive):
         for entry in os.scandir(dir_path):
             if not entry.name.startswith('.') and entry.is_file():
-                if full_path:
-                    return_path = entry.path
-                else:
-                    return_path = osp.relpath(entry.path, root)
-
+                return_path = entry.path if full_path else osp.relpath(entry.path, root)
                 if suffix is None:
                     yield return_path
                 elif return_path.endswith(suffix):
@@ -154,10 +150,7 @@ def is_gray(img, threshold=10):
     diff2 = (img2 - img3).var()
     diff3 = (img3 - img1).var()
     diff_sum = (diff1 + diff2 + diff3) / 3.0
-    if diff_sum <= threshold:
-        return True
-    else:
-        return False
+    return diff_sum <= threshold
 
 def rgb2gray(img, out_channel=3):
     r, g, b = img[:,:,0], img[:,:,1], img[:,:,2]

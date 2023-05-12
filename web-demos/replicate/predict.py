@@ -66,8 +66,6 @@ class Predictor(BasePredictor):
 
         # take the default setting for the demo
         has_aligned = False
-        only_center_face = False
-        draw_box = False
         detection_model = "retinaface_resnet50"
 
         self.face_helper = FaceRestoreHelper(
@@ -91,6 +89,7 @@ class Predictor(BasePredictor):
             self.face_helper.cropped_faces = [img]
         else:
             self.face_helper.read_image(img)
+            only_center_face = False
             # get face landmarks for each face
             num_det_faces = self.face_helper.get_face_landmarks_5(
                 only_center_face=only_center_face, resize=640, eye_dist_threshold=5
@@ -134,6 +133,7 @@ class Predictor(BasePredictor):
             else:
                 bg_img = None
             self.face_helper.get_inverse_affine(None)
+            draw_box = False
             # paste each restored face to the input image
             if face_upsample and face_upsampler is not None:
                 restored_img = self.face_helper.paste_faces_to_input_image(
@@ -169,7 +169,7 @@ def set_realesrgan():
             "If you really want to use it, please modify the corresponding codes.",
             category=RuntimeWarning,
         )
-        upsampler = None
+        return None
     else:
         model = RRDBNet(
             num_in_ch=3,
@@ -179,7 +179,7 @@ def set_realesrgan():
             num_grow_ch=32,
             scale=2,
         )
-        upsampler = RealESRGANer(
+        return RealESRGANer(
             scale=2,
             model_path="./weights/realesrgan/RealESRGAN_x2plus.pth",
             model=model,
@@ -188,4 +188,3 @@ def set_realesrgan():
             pre_pad=0,
             half=True,
         )
-    return upsampler

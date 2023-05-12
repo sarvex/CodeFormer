@@ -41,9 +41,7 @@ def calculate_psnr(img1, img2, crop_border, input_order='HWC', test_y_channel=Fa
         img2 = to_y_channel(img2)
 
     mse = np.mean((img1 - img2)**2)
-    if mse == 0:
-        return float('inf')
-    return 20. * np.log10(255. / np.sqrt(mse))
+    return float('inf') if mse == 0 else 20. * np.log10(255. / np.sqrt(mse))
 
 
 def _ssim(img1, img2):
@@ -122,7 +120,5 @@ def calculate_ssim(img1, img2, crop_border, input_order='HWC', test_y_channel=Fa
         img1 = to_y_channel(img1)
         img2 = to_y_channel(img2)
 
-    ssims = []
-    for i in range(img1.shape[2]):
-        ssims.append(_ssim(img1[..., i], img2[..., i]))
+    ssims = [_ssim(img1[..., i], img2[..., i]) for i in range(img1.shape[2])]
     return np.array(ssims).mean()

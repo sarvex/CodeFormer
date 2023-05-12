@@ -130,7 +130,7 @@ def train_pipeline(root_path):
 
     # initialize loggers
     logger, tb_logger = init_loggers(opt)
-    
+
     # create train and validation dataloaders
     result = create_train_val_dataloader(opt, logger)
     train_loader, train_sampler, val_loader, total_epochs, total_iters = result
@@ -187,10 +187,12 @@ def train_pipeline(root_path):
             iter_time = time.time() - iter_time
             # log
             if current_iter % opt['logger']['print_freq'] == 0:
-                log_vars = {'epoch': epoch, 'iter': current_iter}
-                log_vars.update({'lrs': model.get_current_learning_rate()})
-                log_vars.update({'time': iter_time, 'data_time': data_time})
-                log_vars.update(model.get_current_log())
+                log_vars = {
+                    'epoch': epoch,
+                    'iter': current_iter,
+                    'lrs': model.get_current_learning_rate(),
+                } | {'time': iter_time, 'data_time': data_time}
+                log_vars |= model.get_current_log()
                 msg_logger(log_vars)
 
             # save models and training states
@@ -206,7 +208,7 @@ def train_pipeline(root_path):
             data_time = time.time()
             iter_time = time.time()
             train_data = prefetcher.next()
-        # end of iter
+            # end of iter
 
     # end of epoch
 
